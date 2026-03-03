@@ -1,8 +1,8 @@
 // OAuth2 Authorization Code flow helpers for lux.id IAM (Casdoor-compatible)
 
 const IAM_CLIENT_ID = process.env.NEXT_PUBLIC_IAM_CLIENT_ID ?? 'lux-cloud-client-id'
-const IAM_AUTHORIZE_URL = process.env.NEXT_PUBLIC_IAM_AUTHORIZE_URL ?? 'https://lux.id/login/oauth/authorize'
-const IAM_TOKEN_URL = process.env.NEXT_PUBLIC_IAM_TOKEN_URL ?? 'https://lux.id/api/login/oauth/access_token'
+const IAM_AUTHORIZE_URL = process.env.NEXT_PUBLIC_IAM_AUTHORIZE_URL ?? 'https://lux.id/oauth/authorize'
+const IAM_TOKEN_URL = process.env.NEXT_PUBLIC_IAM_TOKEN_URL ?? 'https://lux.id/oauth/token'
 const REDIRECT_URL = process.env.NEXT_PUBLIC_REDIRECT_URL ?? 'https://cloud.lux.network'
 const CALLBACK_URL = typeof window !== 'undefined'
   ? `${window.location.origin}/callback`
