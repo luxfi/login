@@ -1,11 +1,10 @@
-export function LuxWordmark({ className }: { className?: string }) {
+export function LuxWordmark() {
   return (
     <svg
       width="126"
       height="34"
       viewBox="0 0 63 17"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
       aria-label="LUX"
     >
       <g fill="#ffffff" fillRule="nonzero">
