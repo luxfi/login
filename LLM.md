@@ -1,4 +1,4 @@
-# LLM.md - Lux Login
+# Lux Login
 
 ## Overview
 Lux Network sign-in UI (login, signup, forgot password, OAuth callback) backed
