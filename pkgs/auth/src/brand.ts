@@ -23,8 +23,14 @@ export interface BrandConfig {
   readonly apiHost: string
 }
 
+/**
+ * Read a Vite `import.meta.env.VITE_*` value without depending on `vite/client`
+ * types in this framework-agnostic package. `import.meta` is standard ESM; the
+ * `env` bag is locally typed so the auth package typechecks on its own.
+ */
 function env(key: string): string | undefined {
-  const v = (import.meta.env as Record<string, string | undefined>)[key]
+  const meta = import.meta as ImportMeta & { env?: Record<string, string | undefined> }
+  const v = meta.env?.[key]
   return v && v.length > 0 ? v : undefined
 }
 
