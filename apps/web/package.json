@@ -1,0 +1,31 @@
+{
+  "name": "@luxfi/id-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Lux ID — unified login for lux.network / lux.exchange. Vite + React 19 + TanStack Router + @hanzo/iam PKCE.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 5174",
+    "tc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hanzo/iam": "^0.12.2",
+    "@luxfi/id-auth": "workspace:*",
+    "@tanstack/react-router": "^1.95.0",
+    "clsx": "^2.1.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwind-merge": "^2.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.0.0",
+    "typescript": "5.9.3",
+    "vite": "^7.0.0"
+  }
+}
