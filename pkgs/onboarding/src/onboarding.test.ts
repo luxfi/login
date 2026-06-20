@@ -40,107 +40,107 @@ test('flowById defaults to exchange-full, resolves lite explicitly', () => {
   assert.equal(flowById('garbage').id, 'exchange-full')
 })
 
-// ── Machine: enabledWhen reveals ────────────────────────────────────
+// ── Machine: enabledWhen reveals (aggressive gating) ─────────────────
 
-test('individual path hides entity + entity-document steps', () => {
+test('individual default path is short — no SSN/document, screening, or entity steps', () => {
+  // No funding choice yet: every heavy compliance step stays hidden, so the
+  // applicant reaches review in a handful of single-question screens.
   const data: FormData = { accountType: 'individual' }
   const ids = activeSteps(EXCHANGE_FULL, data).map((s) => s.id)
-  assert.ok(ids.includes('identity'))
-  assert.ok(ids.includes('document')) // individual gets document+selfie
-  assert.ok(!ids.includes('entity'))
-  assert.ok(!ids.includes('entity-document'))
+  assert.deepEqual(ids, ['account-type', 'name', 'birthday', 'address', 'funding', 'review'])
 })
 
-test('corporate path reveals entity steps and hides the individual document', () => {
-  const data: FormData = { accountType: 'corporate' }
+test('a $5k+ deposit reveals the individual document (IDV) step; smaller deposits do not', () => {
+  const base: FormData = { accountType: 'individual', country: 'US' }
+  const has = (d: FormData) => activeSteps(EXCHANGE_FULL, d).some((s) => s.id === 'document')
+  assert.ok(!has({ ...base, fundingPlan: 'later' }))
+  assert.ok(!has({ ...base, fundingPlan: 'standard' }))
+  assert.ok(has({ ...base, fundingPlan: 'large' }))
+})
+
+test('non-US individual reveals the screening step; US does not', () => {
+  const has = (d: FormData) => activeSteps(EXCHANGE_FULL, d).some((s) => s.id === 'screening')
+  assert.ok(!has({ accountType: 'individual', country: 'US' }))
+  assert.ok(has({ accountType: 'individual', country: 'GB' }))
+})
+
+test('corporate path reveals entity + entity-document + accreditation, hides the individual document', () => {
+  const data: FormData = { accountType: 'corporate', fundingPlan: 'large' }
   const ids = activeSteps(EXCHANGE_FULL, data).map((s) => s.id)
   assert.ok(ids.includes('entity'))
   assert.ok(ids.includes('entity-document'))
+  assert.ok(ids.includes('accreditation'))
   assert.ok(!ids.includes('document')) // the individual doc step is hidden
 })
 
 test('nextStepId / prevStepId skip disabled steps in both directions', () => {
   const data: FormData = { accountType: 'individual' }
-  // account-type → identity (entity is skipped for individuals)
-  assert.equal(nextStepId(EXCHANGE_FULL, data, 'account-type'), 'identity')
-  assert.equal(prevStepId(EXCHANGE_FULL, data, 'identity'), 'account-type')
-  // identity → document (entity skipped going forward too)
-  assert.equal(nextStepId(EXCHANGE_FULL, data, 'identity'), 'document')
+  // account-type → name (entity is skipped for individuals)
+  assert.equal(nextStepId(EXCHANGE_FULL, data, 'account-type'), 'name')
+  assert.equal(prevStepId(EXCHANGE_FULL, data, 'name'), 'account-type')
+  // address → funding (entity skipped going forward too)
+  assert.equal(nextStepId(EXCHANGE_FULL, data, 'address'), 'funding')
+  // funding → review on the short path (document hidden without a $5k+ deposit)
+  assert.equal(nextStepId(EXCHANGE_FULL, data, 'funding'), 'review')
+  // funding → document once a $5k+ deposit is chosen
+  assert.equal(
+    nextStepId(EXCHANGE_FULL, { ...data, country: 'US', fundingPlan: 'large' }, 'funding'),
+    'document',
+  )
 })
 
 test('firstStepId is account-type; review is the last active step', () => {
   const data: FormData = { accountType: 'individual' }
   assert.equal(firstStepId(EXCHANGE_FULL, data), 'account-type')
   assert.equal(isLastStep(EXCHANGE_FULL, data, 'review'), true)
-  assert.equal(isLastStep(EXCHANGE_FULL, data, 'identity'), false)
+  assert.equal(isLastStep(EXCHANGE_FULL, data, 'name'), false)
   assert.equal(nextStepId(EXCHANGE_FULL, data, 'review'), null)
 })
 
 // ── Machine: visibleWhen field reveals ──────────────────────────────
 
-test('SSN-last4 shows for US, tax ID shows for non-US', () => {
-  const identity = stepById(EXCHANGE_FULL, 'identity')!
-  const us = visibleFields(identity, { country: 'US' }).map((f) => f.name)
+test('funding reveals SSN-last4 for a US funder, tax ID for non-US, neither for "fund later"', () => {
+  const funding = stepById(EXCHANGE_FULL, 'funding')!
+  const us = visibleFields(funding, { country: 'US', fundingPlan: 'standard' }).map((f) => f.name)
   assert.ok(us.includes('ssnLast4'))
   assert.ok(!us.includes('taxId'))
 
-  const intl = visibleFields(identity, { country: 'GB' }).map((f) => f.name)
+  const intl = visibleFields(funding, { country: 'GB', fundingPlan: 'standard' }).map((f) => f.name)
   assert.ok(intl.includes('taxId'))
   assert.ok(!intl.includes('ssnLast4'))
+
+  // Fund-later collects no tax identity at all.
+  const later = visibleFields(funding, { country: 'US', fundingPlan: 'later' }).map((f) => f.name)
+  assert.ok(!later.includes('ssnLast4'))
+  assert.ok(!later.includes('taxId'))
 })
 
 // ── Machine: validation ─────────────────────────────────────────────
 
 test('a required field blocks until filled; hidden fields are not required', () => {
-  const identity = stepById(EXCHANGE_FULL, 'identity')!
-  // Empty US applicant: legal name etc. missing.
-  const empty = validateStep(identity, { country: 'US' })
+  const name = stepById(EXCHANGE_FULL, 'name')!
+  const empty = validateStep(name, {})
   assert.ok(empty.legalFirstName)
-  assert.ok(empty.ssnLast4) // required + visible for US
-  assert.ok(!('taxId' in empty)) // hidden for US → not required
+  assert.ok(empty.legalLastName)
+  assert.deepEqual(validateStep(name, { legalFirstName: 'Ada', legalLastName: 'Lovelace' }), {})
 
-  // Fully-filled US individual identity.
-  const full: FormData = {
-    legalFirstName: 'Ada',
-    legalLastName: 'Lovelace',
-    dob: '1990-01-01',
-    country: 'US',
-    addressLine1: '1 Analytical Way',
-    city: 'London',
-    state: 'CA',
-    postalCode: '94000',
-    ssnLast4: '1234',
-  }
-  assert.deepEqual(validateStep(identity, full), {})
-  assert.equal(isStepComplete(identity, full), true)
+  // Funding: the plan is required; SSN stays optional until they choose to fund.
+  const funding = stepById(EXCHANGE_FULL, 'funding')!
+  const noPlan = validateStep(funding, { country: 'US' })
+  assert.ok(noPlan.fundingPlan)
+  assert.ok(!('ssnLast4' in noPlan)) // hidden until funding → not required
+  assert.deepEqual(validateStep(funding, { country: 'US', fundingPlan: 'later' }), {})
+  // A US funder must supply SSN-last4.
+  assert.ok(validateStep(funding, { country: 'US', fundingPlan: 'standard' }).ssnLast4)
 })
 
 test('custom validators fire: under-18 DOB and bad SSN-last4', () => {
-  const identity = stepById(EXCHANGE_FULL, 'identity')!
-  const minor = validateStep(identity, {
-    legalFirstName: 'Kid',
-    legalLastName: 'Doe',
-    dob: '2020-01-01',
-    country: 'US',
-    addressLine1: 'x',
-    city: 'x',
-    state: 'x',
-    postalCode: 'x',
-    ssnLast4: '1234',
-  })
-  assert.match(minor.dob!, /at least 18/)
+  const dob = stepById(EXCHANGE_FULL, 'birthday')!
+  assert.match(validateStep(dob, { dob: '2020-01-01' }).dob!, /at least 18/)
+  assert.deepEqual(validateStep(dob, { dob: '1990-01-01' }), {})
 
-  const badSsn = validateStep(identity, {
-    legalFirstName: 'Ada',
-    legalLastName: 'Lovelace',
-    dob: '1990-01-01',
-    country: 'US',
-    addressLine1: 'x',
-    city: 'x',
-    state: 'x',
-    postalCode: 'x',
-    ssnLast4: '12',
-  })
+  const funding = stepById(EXCHANGE_FULL, 'funding')!
+  const badSsn = validateStep(funding, { country: 'US', fundingPlan: 'standard', ssnLast4: '12' })
   assert.match(badSsn.ssnLast4!, /last 4 digits/)
 })
 
@@ -160,10 +160,10 @@ test('non-form steps gate on their synthetic completion key', () => {
 test('firstIncompleteStep is the resume point and null when finished', () => {
   // Fresh individual applicant: first incomplete is the very first step.
   const fresh: FormData = { accountType: 'individual' }
-  // account-type itself is not yet marked complete.
   assert.equal(firstIncompleteStep(EXCHANGE_FULL, fresh), 'account-type')
 
-  // A fully-answered individual flow → complete.
+  // A fully-answered "explore first" individual → complete on the short path:
+  // no SSN, no document IDV, no screening.
   const done: FormData = {
     accountType: 'individual',
     [stepCompletionKey(stepById(EXCHANGE_FULL, 'account-type')!)]: true,
@@ -175,13 +175,32 @@ test('firstIncompleteStep is the resume point and null when finished', () => {
     city: 'London',
     state: 'CA',
     postalCode: '94000',
-    ssnLast4: '1234',
-    [stepCompletionKey(stepById(EXCHANGE_FULL, 'document')!)]: true,
-    // accreditation: not attested → not required, so the step is complete.
-    [stepCompletionKey(stepById(EXCHANGE_FULL, 'screening')!)]: true,
+    fundingPlan: 'later',
   }
   assert.equal(firstIncompleteStep(EXCHANGE_FULL, done), null)
   assert.equal(isFlowComplete(EXCHANGE_FULL, done), true)
+})
+
+test('a $5k+ individual must clear the document IDV step to finish', () => {
+  const base: FormData = {
+    accountType: 'individual',
+    [stepCompletionKey(stepById(EXCHANGE_FULL, 'account-type')!)]: true,
+    legalFirstName: 'Ada',
+    legalLastName: 'Lovelace',
+    dob: '1990-01-01',
+    country: 'US',
+    addressLine1: '1 Analytical Way',
+    city: 'London',
+    state: 'CA',
+    postalCode: '94000',
+    fundingPlan: 'large',
+    ssnLast4: '1234',
+  }
+  // document still pending → resume lands on it.
+  assert.equal(firstIncompleteStep(EXCHANGE_FULL, base), 'document')
+  // once IDV passes, the flow completes.
+  const passed: FormData = { ...base, [stepCompletionKey(stepById(EXCHANGE_FULL, 'document')!)]: true }
+  assert.equal(isFlowComplete(EXCHANGE_FULL, passed), true)
 })
 
 test('lite flow: a display name completes the whole flow', () => {
