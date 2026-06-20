@@ -1,11 +1,19 @@
 /**
  * The two shipped flows, declared as data.
  *
- *   • `exchange-full` — the regulated Lux-exchange KYC. Every possible step is
- *     declared once; `enabledWhen` predicates reveal entity-only steps based on
- *     the chosen account type and accreditation answer. Order:
- *       account-type → identity → (entity info) → accreditation → document →
- *       screening → review.
+ *   • `exchange-full` — the regulated Lux-exchange onboarding, modelled on the
+ *     aggressive "get people in fast, verify only when money moves" pattern.
+ *     Every possible step is declared once; `enabledWhen` predicates reveal the
+ *     heavier compliance steps only when a prior answer triggers them. Order:
+ *       account-type → name → birthday → address → (entity info) → funding →
+ *       (accreditation) → (ID verification) → (screening) → review.
+ *
+ *     Friction is deferred, not front-loaded:
+ *       - SSN / tax-id is collected only once the applicant chooses to fund.
+ *       - Government-ID verification (the IDV document handoff) reveals ONLY for
+ *         a deposit of $5,000 or more — small / "fund later" applicants skip it
+ *         entirely and reach `review` in a handful of single-question screens.
+ *       - Country-risk screening reveals only for non-US residents.
  *   • `lite` — the minimal AI-app flow: email already verified by `@hanzo/iam`,
  *     so this just collects a display name and lands on review.
  *
@@ -14,10 +22,10 @@
  * (`ui/OnboardingRunner`) and the resolver (`domain/machine`) consume these
  * specs unchanged.
  *
- * Clean-room: original Lux flow definitions. The set of regulated KYC steps
- * (CIP identity, accreditation, document capture, country-risk screening) is
- * dictated by US BD/ATS onboarding requirements, not by any prior source;
- * field copy and predicates are written here.
+ * Clean-room: original Lux flow definitions. The set of regulated steps (CIP
+ * identity, deposit-tier gating, document capture, country-risk screening) is
+ * dictated by US BD/ATS onboarding requirements, not by any prior source; field
+ * copy and predicates are written here.
  */
 import {
   isAccountType,
@@ -26,6 +34,14 @@ import {
   type FormData,
   type StepSpec,
 } from './types'
+
+/**
+ * Deposit threshold (USD) at or above which a government-ID verification is
+ * required before the account opens. Below it — including "fund later" — the
+ * applicant onboards with no document upload. Single source for the gate AND
+ * the copy that explains it.
+ */
+export const IDV_DEPOSIT_THRESHOLD = 5000
 
 // ── Shared predicates ───────────────────────────────────────────────
 
@@ -39,6 +55,17 @@ const isEntity = (d: FormData): boolean =>
 /** True when the applicant declared a non-US country of residence. */
 const isNonUs = (d: FormData): boolean =>
   typeof d.country === 'string' && d.country.length > 0 && d.country !== 'US'
+
+/** True once the applicant chose to fund now (either deposit tier), not later. */
+const isFunding = (d: FormData): boolean =>
+  d.fundingPlan === 'standard' || d.fundingPlan === 'large'
+
+/**
+ * True only when the chosen deposit tier is at/above {@link IDV_DEPOSIT_THRESHOLD}.
+ * This is the single gate for the document (photo-ID) step: small and
+ * fund-later applicants never see it.
+ */
+const requiresIdv = (d: FormData): boolean => d.fundingPlan === 'large'
 
 // ── Shared field fragments ──────────────────────────────────────────
 
@@ -87,14 +114,26 @@ const accountTypeStep: StepSpec = {
   phase: 1,
 }
 
-const identityStep: StepSpec = {
-  id: 'identity',
-  title: 'Your identity',
-  byline: 'Legal details, exactly as they appear on your government ID.',
+// Identity is split into single-question screens (name → birthday → address)
+// so each ask is a fast, focused tap on mobile rather than one dense form.
+
+const nameStep: StepSpec = {
+  id: 'name',
+  title: 'What’s your name?',
+  byline: 'It helps us verify your identity. Use your legal name.',
   phase: 1,
   fields: [
     { name: 'legalFirstName', label: 'Legal first name', kind: 'text', required: true },
     { name: 'legalLastName', label: 'Legal last name', kind: 'text', required: true },
+  ],
+}
+
+const dobStep: StepSpec = {
+  id: 'birthday',
+  title: 'When’s your birthday?',
+  byline: 'You must be 18 or older to open an account.',
+  phase: 1,
+  fields: [
     {
       name: 'dob',
       label: 'Date of birth',
@@ -109,27 +148,15 @@ const identityStep: StepSpec = {
         return null
       },
     },
-    COUNTRY_FIELD,
-    ...addressFields,
-    {
-      name: 'ssnLast4',
-      label: 'Last 4 of SSN',
-      kind: 'ssn-last4',
-      help: 'US persons only. We never collect your full SSN in the browser.',
-      // US residents only; reveal hides AND skips validation for non-US.
-      visibleWhen: (d) => !isNonUs(d),
-      required: true,
-      validate: (v) => (typeof v === 'string' && /^\d{4}$/.test(v) ? null : 'Enter the last 4 digits.'),
-    },
-    {
-      name: 'taxId',
-      label: 'Tax identification number',
-      kind: 'text',
-      help: 'Your local tax ID (non-US residents).',
-      visibleWhen: isNonUs,
-      required: true,
-    },
   ],
+}
+
+const addressStep: StepSpec = {
+  id: 'address',
+  title: 'What’s your address?',
+  byline: 'It helps us verify your identity — we won’t send you marketing mail.',
+  phase: 1,
+  fields: [COUNTRY_FIELD, ...addressFields],
 }
 
 const entityStep: StepSpec = {
@@ -165,11 +192,62 @@ const entityStep: StepSpec = {
   ],
 }
 
+/**
+ * Funding intent — the pivot that keeps onboarding aggressive. Picking "fund
+ * later" lands the applicant on review with no SSN and no document upload. The
+ * tax-id / SSN fields reveal only once they choose to deposit; the document
+ * (photo-ID) step reveals only for the $5,000+ tier (see `requiresIdv`).
+ */
+const fundingStep: StepSpec = {
+  id: 'funding',
+  title: 'How would you like to start?',
+  byline: 'Explore Lux first and fund whenever you’re ready — no verification to look around.',
+  phase: 2,
+  fields: [
+    {
+      name: 'fundingPlan',
+      label: 'Choose how you’d like to begin',
+      kind: 'select',
+      required: true,
+      options: [
+        { value: 'later', label: 'Explore first — fund my account later' },
+        { value: 'standard', label: `Deposit under $${IDV_DEPOSIT_THRESHOLD.toLocaleString()}` },
+        {
+          value: 'large',
+          label: `Deposit $${IDV_DEPOSIT_THRESHOLD.toLocaleString()} or more`,
+        },
+      ],
+      help: `Deposits of $${IDV_DEPOSIT_THRESHOLD.toLocaleString()}+ require a quick photo-ID check; smaller amounts don’t.`,
+    },
+    {
+      name: 'ssnLast4',
+      label: 'Last 4 of SSN',
+      kind: 'ssn-last4',
+      help: 'US persons funding an account — required by the IRS for a regulated exchange. We never collect your full SSN in the browser.',
+      // Only US persons who chose to fund; hidden (and unvalidated) otherwise.
+      visibleWhen: (d) => isFunding(d) && !isNonUs(d),
+      required: true,
+      validate: (v) => (typeof v === 'string' && /^\d{4}$/.test(v) ? null : 'Enter the last 4 digits.'),
+    },
+    {
+      name: 'taxId',
+      label: 'Tax identification number',
+      kind: 'text',
+      help: 'Your local tax ID (non-US residents funding an account).',
+      visibleWhen: (d) => isFunding(d) && isNonUs(d),
+      required: true,
+    },
+  ],
+}
+
 const accreditationStep: StepSpec = {
   id: 'accreditation',
   title: 'Accreditation',
   byline: 'Regulated offerings require an accredited-investor attestation.',
   phase: 2,
+  // Entities attest accreditation up front; individuals are not gated on it to
+  // start, so this is skipped for the natural-person path.
+  enabledWhen: isEntity,
   fields: [
     {
       name: 'accredited',
@@ -197,9 +275,9 @@ const accreditationStep: StepSpec = {
 const documentStep: StepSpec = {
   id: 'document',
   title: 'Verify your ID',
-  byline: 'Upload a government-issued photo ID. This is handled by our verification partner.',
+  byline: `A quick government-ID + selfie check — required for deposits of $${IDV_DEPOSIT_THRESHOLD.toLocaleString()} or more. Handled by our verification partner.`,
   kind: 'document',
-  phase: 2,
+  phase: 3,
   // Individuals scan a document + selfie; entities run a business (KYB) check.
   check: 'document+selfie',
 }
@@ -209,7 +287,7 @@ const entityDocumentStep: StepSpec = {
   title: 'Verify the entity',
   byline: 'Upload formation documents and beneficial-ownership information.',
   kind: 'document',
-  phase: 2,
+  phase: 3,
   enabledWhen: isEntity,
   check: 'business',
 }
@@ -220,6 +298,8 @@ const screeningStep: StepSpec = {
   byline: 'A jurisdiction and sanctions screening against your declared country.',
   kind: 'screening',
   phase: 3,
+  // US residents clear automatically; only surface this screen for non-US.
+  enabledWhen: isNonUs,
 }
 
 const reviewStep: StepSpec = {
@@ -231,20 +311,24 @@ const reviewStep: StepSpec = {
 }
 
 /**
- * The regulated exchange KYC flow. The `document` step only applies to
- * individuals (entities go through `entity-document`); we gate it with the
- * step-level `enabledWhen` rather than two near-identical specs.
+ * The regulated exchange flow. Every possible step is listed once in order;
+ * `enabledWhen` keeps the default individual path short (account-type → name →
+ * birthday → address → funding → review) and reveals SSN, document IDV,
+ * accreditation, entity, and screening only when an answer triggers them.
  */
 export const EXCHANGE_FULL: FlowSpec = {
   id: 'exchange-full',
   title: 'Lux Exchange',
   steps: [
     accountTypeStep,
-    identityStep,
+    nameStep,
+    dobStep,
+    addressStep,
     entityStep,
-    { ...documentStep, enabledWhen: isIndividual },
-    entityDocumentStep,
+    fundingStep,
     accreditationStep,
+    { ...documentStep, enabledWhen: (d) => isIndividual(d) && requiresIdv(d) },
+    entityDocumentStep,
     screeningStep,
     reviewStep,
   ],

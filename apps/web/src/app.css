@@ -1,17 +1,31 @@
 @import 'tailwindcss';
 
 /*
+ * Scan the workspace UI packages that are consumed from source (their exports
+ * resolve to `src/index.ts`, no built dist). pnpm links them under
+ * `node_modules/@luxfi/*`, which Tailwind v4's automatic content detection
+ * excludes — so utilities used ONLY inside these packages (e.g. the onboarding
+ * progress bar's `h-1.5` / `h-full`) emit no CSS and collapse to 0px. Listing
+ * the real source dirs here makes those classes generate. Paths are relative
+ * to this file (apps/web/src/app.css).
+ */
+@source '../../../pkgs/onboarding/src';
+@source '../../../pkgs/idv/src';
+
+/*
  * Lux ID — design tokens + login animation keyframes.
  *
  * Tailwind v4, CSS-first: tokens are declared in `@theme` so utilities like
  * `text-foreground`, `text-primary`, `text-success-9`, `text-danger-9` resolve
  * against the Lux palette. The app is dark by default (the login surface is a
- * near-black canvas with a Lux-green accent).
+ * near-black canvas).
  *
- * Lux brand primary is Lux green `#12FF80` (canonical `brand.primaryColor`
- * across Lux repos) — NOT the source ticker's blue. The glow finale sweeps to
- * Lux green accordingly. Keyframes are clean-room: glow pulse, fade-in, and a
- * grey → white → Lux-green color wave for the final marketing line.
+ * MONOCHROME by design. Lux ID carries NO brand hue — the primary/accent is
+ * near-white on near-black, the only "color" derives from these tokens, and a
+ * downstream brand can re-tint by overriding `--color-primary`. (Earlier builds
+ * wrongly baked in Lux green `#12FF80`; that has been removed.) Keyframes are
+ * clean-room: glow pulse, fade-in, and a grey → white glow wave for the final
+ * marketing line.
  */
 
 @theme {
@@ -19,12 +33,13 @@
   --color-foreground: #f4f6f8;
   --color-muted-foreground: #8a929c;
 
-  /* Lux green accent. */
-  --color-primary: #12ff80;
-  --color-primary-strong: #4dffa3;
+  /* Monochrome accent — near-white primary, pure white on hover/active. */
+  --color-primary: #f4f6f8;
+  --color-primary-strong: #ffffff;
 
-  /* Price-delta semantic colors. */
-  --color-success-9: #12ff80;
+  /* Semantic states. `success` is monochrome (no green); `danger` keeps a
+   * restrained red because an error affordance must read as an error. */
+  --color-success-9: #f4f6f8;
   --color-danger-9: #ff5a65;
 
   /* Surfaces + hairlines for the auth card. */
@@ -81,7 +96,7 @@ body {
   }
 }
 
-/* Final line: grey → white → Lux-green glow wave, then settles on green. */
+/* Final line: grey → white glow wave, then settles on bright white. */
 @keyframes line-glow-wave {
   0% {
     opacity: 0;
@@ -99,18 +114,18 @@ body {
     text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
   }
   60% {
-    color: rgba(77, 255, 163, 0.95);
+    color: rgba(255, 255, 255, 0.98);
     text-shadow:
-      0 0 15px rgba(18, 255, 128, 0.5),
-      0 0 40px rgba(18, 255, 128, 0.2);
+      0 0 15px rgba(255, 255, 255, 0.5),
+      0 0 40px rgba(255, 255, 255, 0.2);
   }
   80%,
   100% {
     opacity: 1;
-    color: rgba(18, 255, 128, 0.92);
+    color: rgba(255, 255, 255, 0.95);
     text-shadow:
-      0 0 12px rgba(18, 255, 128, 0.45),
-      0 0 30px rgba(18, 255, 128, 0.16);
+      0 0 12px rgba(255, 255, 255, 0.45),
+      0 0 30px rgba(255, 255, 255, 0.16);
   }
 }
 
@@ -136,13 +151,15 @@ body {
 /* ── Onboarding action buttons ──────────────────────────────────────
  * The two button shapes the @luxfi/id-onboarding runner relies on. Everything
  * else in the runner is inline Tailwind utilities; these are factored out
- * because both Continue/Submit and Back reuse the exact same geometry. Lux
- * green primary, hairline ghost — same palette as the auth surface.
+ * because both Continue/Submit and Back reuse the exact same geometry.
+ * Monochrome primary (near-white fill, dark ink) + hairline ghost — same
+ * palette as the auth surface. Sized as a chunky, full-width-friendly tap
+ * target (Kalshi-style) so Continue is the obvious next action on mobile.
  */
 .lux-id-btn-primary {
-  border-radius: 0.625rem;
-  padding: 0.625rem 1.25rem;
-  font-size: 0.875rem;
+  border-radius: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: #07080a;
   background: var(--color-primary);
