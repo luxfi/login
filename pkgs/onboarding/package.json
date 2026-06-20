@@ -1,0 +1,33 @@
+{
+  "name": "@luxfi/id-onboarding",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Lux composable onboarding + IDV/KYC framework — a declarative flow engine (exchange-full + lite configs), one runner, IAM-backed persistence. Domain / service / UI split.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./service": "./src/service/onboarding.ts",
+    "./runner": "./src/ui/OnboardingRunner.tsx",
+    "./package.json": "./package.json"
+  },
+  "files": ["src", "!src/**/*.test.ts"],
+  "scripts": {
+    "tc": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@luxfi/id-idv": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "typescript": "5.9.3"
+  }
+}
