@@ -42,7 +42,9 @@ import { screenCountry } from '../domain/screening'
  * through the service between steps for resume.
  *
  * Clean-room Lux implementation. Tailwind utility classes match the lux/id web
- * app theme (`text-foreground`, `text-primary` = Lux green `#12FF80`, etc.).
+ * app theme — monochrome by design (`text-foreground`, `text-primary` =
+ * near-white; no brand hue). Layout is sized for a Kalshi-style single-question
+ * mobile screen: a narrow column, a big heading, and a full-width primary CTA.
  */
 export interface OnboardingRunnerProps {
   /** The flow to render (`exchange-full` or `lite`, from `domain/flows`). */
@@ -129,11 +131,11 @@ export function OnboardingRunner({
   const showBack = index > 0
 
   return (
-    <section className="lux-id-ob mx-auto flex w-full max-w-lg flex-col gap-6">
+    <section className="lux-id-ob mx-auto flex w-full max-w-sm flex-col gap-8">
       <Progress steps={steps} activeIndex={index} />
 
-      <header className="lux-id-ob-head flex flex-col gap-1">
-        <h1 className="text-xl font-semibold text-foreground">{step.title}</h1>
+      <header className="lux-id-ob-head flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">{step.title}</h1>
         {step.byline ? <p className="text-sm text-muted-foreground">{step.byline}</p> : null}
       </header>
 
@@ -177,28 +179,36 @@ export function OnboardingRunner({
         </p>
       ) : null}
 
-      <nav className="lux-id-ob-actions flex items-center justify-between gap-3">
-        {showBack ? (
-          <button type="button" className="lux-id-btn-ghost" onClick={goBack} disabled={submitting}>
-            Back
-          </button>
-        ) : (
-          <span />
-        )}
+      <nav className="lux-id-ob-actions flex flex-col gap-3">
         {last ? (
           <button
             type="button"
-            className="lux-id-btn-primary"
+            className="lux-id-btn-primary w-full"
             onClick={doSubmit}
             disabled={submitting || !stepValid}
           >
             {submitting ? 'Submitting…' : 'Submit application'}
           </button>
         ) : (
-          <button type="button" className="lux-id-btn-primary" onClick={goNext} disabled={submitting}>
+          <button
+            type="button"
+            className="lux-id-btn-primary w-full"
+            onClick={goNext}
+            disabled={submitting}
+          >
             Continue
           </button>
         )}
+        {showBack ? (
+          <button
+            type="button"
+            className="mx-auto text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+            onClick={goBack}
+            disabled={submitting}
+          >
+            Back
+          </button>
+        ) : null}
       </nav>
     </section>
   )
@@ -206,25 +216,55 @@ export function OnboardingRunner({
 
 // ── Progress ────────────────────────────────────────────────────────
 
-/** Phase-grouped progress bar driven by the active steps' `phase`. */
+/**
+ * Phase-grouped progress bar — one segment per phase present in the active
+ * steps (at most three: Account → Funding → Verify), each filling continuously
+ * as the applicant moves through that phase. This is the Kalshi pattern: a
+ * handful of chunky bars that read as "how far through the whole thing am I",
+ * not one tick per micro-step. Fill is derived from where the active step sits
+ * within its phase, so splitting a phase into more single-question screens
+ * never changes the number of bars.
+ */
 function Progress({ steps, activeIndex }: { steps: readonly StepSpec[]; activeIndex: number }) {
+  // Distinct phases in flow order (1 → 2 → 3), keeping only those with steps.
+  const phases = useMemo(() => {
+    const seen: number[] = []
+    for (const s of steps) {
+      const p = s.phase ?? 1
+      if (!seen.includes(p)) seen.push(p)
+    }
+    return seen.sort((a, b) => a - b)
+  }, [steps])
+
   return (
     <div
-      className="lux-id-ob-progress flex gap-1.5"
+      className="lux-id-ob-progress flex gap-2"
       role="progressbar"
       aria-valuenow={activeIndex + 1}
       aria-valuemax={steps.length}
     >
-      {steps.map((s, i) => (
-        <span
-          key={s.id}
-          aria-hidden
-          className={
-            'h-1 flex-1 rounded-full transition-colors ' +
-            (i <= activeIndex ? 'bg-primary' : 'bg-border')
-          }
-        />
-      ))}
+      {phases.map((phase) => {
+        const idxs = steps
+          .map((s, i) => ({ phase: s.phase ?? 1, i }))
+          .filter((x) => x.phase === phase)
+          .map((x) => x.i)
+        const start = idxs[0]!
+        const end = idxs[idxs.length - 1]!
+        const fill =
+          activeIndex > end
+            ? 100
+            : activeIndex < start
+              ? 0
+              : ((activeIndex - start + 1) / idxs.length) * 100
+        return (
+          <div key={phase} aria-hidden className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300 ease-out"
+              style={{ width: `${fill}%` }}
+            />
+          </div>
+        )
+      })}
     </div>
   )
 }
