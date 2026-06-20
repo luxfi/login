@@ -132,3 +132,47 @@ body {
     opacity: 1;
   }
 }
+
+/* ── Onboarding action buttons ──────────────────────────────────────
+ * The two button shapes the @luxfi/id-onboarding runner relies on. Everything
+ * else in the runner is inline Tailwind utilities; these are factored out
+ * because both Continue/Submit and Back reuse the exact same geometry. Lux
+ * green primary, hairline ghost — same palette as the auth surface.
+ */
+.lux-id-btn-primary {
+  border-radius: 0.625rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #07080a;
+  background: var(--color-primary);
+  transition: background 120ms ease;
+}
+.lux-id-btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-strong);
+}
+.lux-id-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lux-id-btn-ghost {
+  border-radius: 0.625rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-muted-foreground);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+.lux-id-btn-ghost:hover:not(:disabled) {
+  color: var(--color-foreground);
+  border-color: var(--color-primary);
+}
+.lux-id-btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

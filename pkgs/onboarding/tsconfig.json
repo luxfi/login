@@ -10,7 +10,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "verbatimModuleSyntax": true,
-    "allowImportingTsExtensions": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "noEmit": true,

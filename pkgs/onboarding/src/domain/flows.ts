@@ -25,7 +25,7 @@ import {
   type FlowSpec,
   type FormData,
   type StepSpec,
-} from './types.ts'
+} from './types'
 
 // ── Shared predicates ───────────────────────────────────────────────
 

@@ -20,6 +20,12 @@ importers:
       '@luxfi/id-auth':
         specifier: workspace:*
         version: link:../../pkgs/auth
+      '@luxfi/id-idv':
+        specifier: workspace:*
+        version: link:../../pkgs/idv
+      '@luxfi/id-onboarding':
+        specifier: workspace:*
+        version: link:../../pkgs/onboarding
       '@tanstack/react-router':
         specifier: ^1.95.0
         version: 1.170.16(react-dom@19.2.5(react@19.2.5))(react@19.2.5)

@@ -2,15 +2,17 @@
  * Onboarding unit tests — run with the Node built-in test runner and native
  * TypeScript stripping (no test-framework dependency):
  *
- *   node --test --experimental-strip-types 'src/**\/*.test.ts'
+ *   pnpm --filter @luxfi/id-onboarding test
  *
- * Covers the React-free surface: the flow machine (reveals, validation, resume
- * point), the country-risk screening, and the service's request shaping + IAM
- * response translation (with an injected fake fetch).
+ * (which registers the extensionless-`.ts` resolver hook, then runs
+ * `node --test --experimental-strip-types`). Covers the React-free surface:
+ * the flow machine (reveals, validation, resume point), the country-risk
+ * screening, and the service's request shaping + IAM response translation
+ * (with an injected fake fetch).
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { EXCHANGE_FULL, LITE, flowById } from './domain/flows.ts'
+import { EXCHANGE_FULL, LITE, flowById } from './domain/flows'
 import {
   activeSteps,
   nextStepId,
@@ -24,10 +26,10 @@ import {
   isFlowComplete,
   stepById,
   stepCompletionKey,
-} from './domain/machine.ts'
-import { screenCountry } from './domain/screening.ts'
-import { createOnboardingService } from './service/onboarding.ts'
-import type { FormData } from './domain/types.ts'
+} from './domain/machine'
+import { screenCountry } from './domain/screening'
+import { createOnboardingService } from './service/onboarding'
+import type { FormData } from './domain/types'
 
 // ── Flow registry ───────────────────────────────────────────────────
 
