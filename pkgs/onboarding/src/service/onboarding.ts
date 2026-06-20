@@ -23,7 +23,7 @@
  * Clean-room: original Lux implementation, following the @hanzo/id-onboarding
  * service shape (Result-typed, column-scoped IAM writes, fetch-injectable).
  */
-import type { FlowId, FormData } from '../domain/types.ts'
+import type { FlowId, FormData } from '../domain/types'
 
 /** Result of a write that can fail gracefully (no throw on expected errors). */
 export type Result<T> =

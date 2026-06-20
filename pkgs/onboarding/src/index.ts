@@ -22,9 +22,9 @@ export {
   type Phase,
   type StepKind,
   type StepSpec,
-} from './domain/types.ts'
+} from './domain/types'
 
-export { EXCHANGE_FULL, LITE, FLOWS, flowById } from './domain/flows.ts'
+export { EXCHANGE_FULL, LITE, FLOWS, flowById } from './domain/flows'
 
 // ── Domain: the pure flow machine ───────────────────────────────────
 export {
@@ -42,14 +42,14 @@ export {
   isFlowComplete,
   stepCompletionKey,
   type StepErrors,
-} from './domain/machine.ts'
+} from './domain/machine'
 
 // ── Domain: country-risk / CIP screening ────────────────────────────
 export {
   screenCountry,
   type RiskAction,
   type ScreeningResult,
-} from './domain/screening.ts'
+} from './domain/screening'
 
 // ── Service: IAM-backed persistence ─────────────────────────────────
 export {
@@ -58,7 +58,7 @@ export {
   type OnboardingServiceOptions,
   type ApplicationDraft,
   type Result,
-} from './service/onboarding.ts'
+} from './service/onboarding'
 
 // ── UI: the runner that renders any FlowSpec ────────────────────────
-export { OnboardingRunner, type OnboardingRunnerProps } from './ui/OnboardingRunner.tsx'
+export { OnboardingRunner, type OnboardingRunnerProps } from './ui/OnboardingRunner'
