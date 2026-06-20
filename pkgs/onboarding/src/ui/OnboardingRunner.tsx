@@ -8,7 +8,7 @@ import {
   type FormData,
   type FormValue,
   type StepSpec,
-} from '../domain/types.ts'
+} from '../domain/types'
 import {
   activeSteps,
   isLastStep,
@@ -19,8 +19,8 @@ import {
   validateStep,
   visibleFields,
   type StepErrors,
-} from '../domain/machine.ts'
-import { screenCountry } from '../domain/screening.ts'
+} from '../domain/machine'
+import { screenCountry } from '../domain/screening'
 
 /**
  * OnboardingRunner — the ONE component that renders any {@link FlowSpec}.

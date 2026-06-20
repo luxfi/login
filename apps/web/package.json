@@ -13,6 +13,8 @@
   "dependencies": {
     "@hanzo/iam": "^0.12.2",
     "@luxfi/id-auth": "workspace:*",
+    "@luxfi/id-idv": "workspace:*",
+    "@luxfi/id-onboarding": "workspace:*",
     "@tanstack/react-router": "^1.95.0",
     "clsx": "^2.1.1",
     "react": "^19.2.0",

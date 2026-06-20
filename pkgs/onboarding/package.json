@@ -13,7 +13,7 @@
   "files": ["src", "!src/**/*.test.ts"],
   "scripts": {
     "tc": "tsc --noEmit",
-    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
+    "test": "node --import ./test-resolver.mjs --test --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
     "@luxfi/id-idv": "workspace:*"

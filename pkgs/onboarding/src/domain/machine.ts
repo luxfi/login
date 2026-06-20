@@ -19,7 +19,7 @@
  *
  * Clean-room: original Lux implementation.
  */
-import type { FieldSpec, FlowSpec, FormData, FormValue, StepSpec } from './types.ts'
+import type { FieldSpec, FlowSpec, FormData, FormValue, StepSpec } from './types'
 
 /** Map of `fieldName → error message` for the invalid fields in a step. */
 export type StepErrors = Record<string, string>

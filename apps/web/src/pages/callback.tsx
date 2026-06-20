@@ -9,7 +9,9 @@ import { LuxMark } from '~/components/lux-mark'
  * `/v1/iam/oauth/token`, and persists tokens in session storage.
  *
  * On success, forward to whichever app initiated the flow (the optional
- * `return_to` query param, same-origin only) or land on the Lux exchange.
+ * `return_to` query param, same-origin only) or hand off to `/onboarding`,
+ * which resumes an incomplete KYC application or forwards a finished applicant
+ * on to the Lux exchange.
  */
 export function Callback() {
   const iam = useIam()
@@ -28,7 +30,10 @@ export function Callback() {
           window.location.replace(returnTo.toString())
           return
         }
-        window.location.replace('/')
+        // No explicit return target → hand off to onboarding, which resolves
+        // the resume step (incomplete profile → KYC) or forwards an already-
+        // submitted applicant straight on to the exchange.
+        window.location.replace('/onboarding')
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
   }, [iam])
