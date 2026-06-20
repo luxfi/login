@@ -1,0 +1,16 @@
+{
+  "name": "@luxfi/id-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Lux identity app — login + onboarding for lux.network / lux.exchange",
+  "scripts": {
+    "dev": "pnpm --filter @luxfi/id-web dev",
+    "build": "pnpm --filter @luxfi/id-web build",
+    "preview": "pnpm --filter @luxfi/id-web preview",
+    "tc": "pnpm -r tc"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
