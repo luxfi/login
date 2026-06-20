@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { IDVFlow, type IDVCheckKind, type IDVStatusReport } from '@luxfi/id-idv'
 import {
   ACCOUNT_TYPES,
@@ -481,9 +481,16 @@ function DocumentPanel({
 
 function ScreeningPanel({ country, onCleared }: { country?: string; onCleared: () => void }) {
   const result = useMemo(() => screenCountry(country), [country])
-  // A non-blocking result clears the step the moment it renders; a blocking
-  // result never clears, so the runner keeps Continue disabled at submit.
-  if (!result.blocking) onCleared()
+
+  // A non-blocking result clears the step; a blocking result never does, so
+  // the runner keeps Continue disabled at submit. Recording completion is a
+  // state write, so it runs in an effect (never during render) and only when
+  // the verdict actually changes — not on every re-render.
+  const onClearedRef = useRef(onCleared)
+  onClearedRef.current = onCleared
+  useEffect(() => {
+    if (!result.blocking) onClearedRef.current()
+  }, [result.blocking])
 
   const toneClass =
     result.tone === 'error'
