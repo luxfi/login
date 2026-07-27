@@ -52,7 +52,7 @@ Copy `.env.example`. All variables are `VITE_*` (injected at build time):
 - `VITE_REDIRECT_URL`     post-login redirect target
 
 ## Auth flow
-- Password login/signup: browser `POST` to `${VITE_IAM_URL}/api/login|signup`
+- Password login/signup: browser `POST` to `${VITE_IAM_URL}/v1/iam/login|signup`
   against lux.id (Casdoor). Requires lux.id to allow CORS from the hosting
   origin.
 - OAuth fallback: `getOAuthAuthorizeUrl()` redirects to

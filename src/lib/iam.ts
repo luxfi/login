@@ -50,7 +50,7 @@ async function post(path: string, body: Record<string, unknown>): Promise<Casdoo
 }
 
 export async function login(email: string, password: string): Promise<void> {
-  const data = await post('/api/login', {
+  const data = await post('/v1/iam/login', {
     application: IAM_APP,
     organization: IAM_ORG,
     username: email,
@@ -64,7 +64,7 @@ export async function login(email: string, password: string): Promise<void> {
 }
 
 export async function signup(name: string, email: string, password: string): Promise<void> {
-  const data = await post('/api/signup', {
+  const data = await post('/v1/iam/signup', {
     application: IAM_APP,
     organization: IAM_ORG,
     username: email,
@@ -82,7 +82,7 @@ export async function signup(name: string, email: string, password: string): Pro
 export async function forgotPassword(email: string): Promise<void> {
   // Always succeeds from the UI's perspective to prevent email enumeration.
   try {
-    await post('/api/send-verification-code', {
+    await post('/v1/iam/send-verification-code', {
       application: IAM_APP,
       organization: IAM_ORG,
       dest: email,
