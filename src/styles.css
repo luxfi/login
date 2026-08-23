@@ -1,3 +1,5 @@
+@import '@hanzo/design/tokens/fonts.css';
+
 :root {
   color-scheme: dark;
   --bg: #000;
@@ -17,8 +19,8 @@ html, body, #root { min-height: 100%; }
 body {
   background: var(--bg);
   color: var(--fg);
-  font-family: "Basel Grotesk", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  font-weight: 400;
+  font-family: var(--font-sans);
+  font-weight: 497;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.01em;
@@ -63,7 +65,7 @@ button {
 
 .card h1 {
   font-size: 22px;
-  font-weight: 500;
+  font-weight: 606;
   text-align: center;
   margin-bottom: 8px;
   letter-spacing: -0.01em;
@@ -89,7 +91,7 @@ form.stack {
 .field label {
   display: block;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 606;
   color: var(--muted);
   margin-bottom: 6px;
 }
@@ -136,7 +138,7 @@ form.stack {
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 606;
   background: transparent;
   color: var(--fg);
   transition: background .12s, border-color .12s;
@@ -183,7 +185,7 @@ form.stack {
   margin-bottom: 16px;
 }
 
-.info strong { color: var(--fg); font-weight: 500; }
+.info strong { color: var(--fg); font-weight: 606; }
 
 .divider {
   display: flex;
